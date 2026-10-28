@@ -1,0 +1,7 @@
+<!doctype html><meta charset="utf-8"><title>sprites</title>
+<style>body{margin:0;background:#2a3a6a;display:flex;gap:20px;padding:10px;align-items:flex-end}canvas{image-rendering:pixelated}</style>
+<body><script src="../jogo/sprites.js"></script>
+<script>
+// avatar inteiro ampliado (10x) e tamanho real no site (3x)
+[10,3].forEach(function(e){var c=document.createElement('canvas');c.width=24;c.height=41;c.style.width=(24*e)+'px';c.style.height=(41*e)+'px';document.body.appendChild(c);Sprites.desenhar(c.getContext('2d'),Sprites.astronauta.parado,0,0,1);});
+</script>

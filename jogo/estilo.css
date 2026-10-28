@@ -1,0 +1,106 @@
+/* Portfolio em formato de jogo. Tokens, HUD, painéis e tipografia pixel. */
+@font-face{font-family:"Press Start 2P";src:url("fontes/press-start-2p.woff2") format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Pixelify Sans";src:url("fontes/pixelify-400.woff2") format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Pixelify Sans";src:url("fontes/pixelify-700.woff2") format("woff2");font-weight:700;font-display:swap}
+
+:root{
+  --noite:#0b0e2a;--indigo:#1d2260;--horizonte:#5b3a8c;--brasa:#ff9a62;--ouro:#ffd86b;--creme:#f4ecd0;
+  --painel:#0d1030;--painel2:#141a4a;--sombra:#05061a;
+  --titulo:"Press Start 2P","Courier New",monospace;
+  --corpo:"Pixelify Sans","Courier New",monospace;
+  --hud-altura:105px; /* o jogo.js ajusta para a altura medida do HUD */
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:calc(var(--hud-altura) + 16px)}
+body{margin:0;color:var(--creme);font:400 19px/1.7 var(--corpo);background:linear-gradient(#ff9a62,#5b3a8c 30%,#0b0e2a) fixed;background-color:var(--noite);overflow-x:hidden}
+a{color:var(--ouro)}
+a:focus-visible,button:focus-visible{outline:4px solid var(--ouro);outline-offset:4px}
+.pular{position:absolute;left:-999px;top:8px;background:var(--painel);color:var(--creme);padding:8px 12px;z-index:20}
+.pular:focus{left:8px}
+
+/* Fundo e personagem */
+#ceu{position:fixed;inset:0;width:100%;height:100%;image-rendering:pixelated;z-index:-1}
+#astronauta{display:none;position:fixed;left:24px;bottom:24px;width:72px;height:123px;image-rendering:pixelated;pointer-events:none;z-index:5;transition:transform .3s steps(4)}
+#astronauta.pulo{transform:translateY(-24px)}
+@keyframes balanca{from{transform:translateY(0)}to{transform:translateY(-4px)}}
+#astronauta.sobe{animation:balanca .25s steps(2) infinite alternate}
+@media(min-width:1280px){#astronauta{display:block}} /* abaixo disso ele cobriria o texto dos paineis */
+
+/* HUD */
+.hud{position:fixed;top:0;left:0;right:0;z-index:10;background:var(--painel);border-bottom:4px solid var(--creme);box-shadow:0 6px 0 var(--sombra)}
+.hud-linha{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px 6px;max-width:1100px;margin:0 auto}
+#hud-fase{font:400 12px/1.4 var(--titulo);color:var(--ouro);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.idioma{display:inline-flex;border:2px solid var(--creme)}
+.idioma a,.idioma span{font:400 12px/1 var(--titulo);padding:8px 10px;text-decoration:none;color:var(--creme)}
+.idioma span{background:var(--ouro);color:var(--noite)}
+.altitude{height:8px;margin:0 16px;max-width:1068px;background:var(--noite);border:2px solid var(--creme)}
+@media(min-width:1100px){.altitude{margin:0 auto}}
+.altitude span{display:block;height:100%;width:0;background:var(--brasa)}
+.fases{display:flex;gap:4px;overflow-x:auto;padding:6px 16px 8px;max-width:1100px;margin:0 auto}
+.fases a{flex:0 0 auto;font:400 11px/1 var(--titulo);padding:8px 10px;color:var(--creme);text-decoration:none;border:2px solid transparent}
+.fases a:hover{border-color:var(--creme)}
+.fases a[aria-current="true"]{background:var(--ouro);color:var(--noite)}
+
+/* Estrutura */
+main{max-width:1100px;margin:0 auto;padding:0 16px}
+section{min-height:100vh;padding:calc(var(--hud-altura) + 32px) 0 64px;--acento:var(--ouro)}
+section#inicio{--acento:var(--brasa);display:flex;flex-direction:column;justify-content:center}
+section#fase-1{--acento:var(--ouro)}
+section#fase-2{--acento:#7fe0ff}
+section#fase-3{--acento:var(--brasa)}
+section#fase-4{--acento:#c9a7ff}
+section#contato{--acento:var(--ouro);display:flex;flex-direction:column;justify-content:center}
+
+/* Painéis: borda de pixel (3 tamanhos), cantos em degraus, sombra dura */
+.painel,.painel-item,.selo{background:color-mix(in srgb,var(--painel) 94%,transparent);max-width:760px;margin:12px 8px}
+.painel{padding:24px 28px;box-shadow:0 -4px 0 0 var(--creme),0 4px 0 0 var(--creme),-4px 0 0 0 var(--creme),4px 0 0 0 var(--creme),10px 10px 0 0 var(--sombra)}
+.painel-item{background:var(--painel2);padding:16px 20px 16px 28px;box-shadow:0 -2px 0 0 var(--creme),0 2px 0 0 var(--creme),-2px 0 0 0 var(--creme),2px 0 0 0 var(--creme),inset 8px 0 0 0 var(--acento),6px 6px 0 0 var(--sombra)}
+.selo{background:var(--painel2);padding:12px 14px;box-shadow:0 -2px 0 0 var(--ouro),0 2px 0 0 var(--ouro),-2px 0 0 0 var(--ouro),2px 0 0 0 var(--ouro)}
+.painel .painel-item{max-width:none;margin:16px 4px}
+.painel>*:first-child{margin-top:0}
+.painel>*:last-child{margin-bottom:0}
+
+/* Tipografia */
+h1,h2,h3{font-family:var(--titulo);font-weight:400;line-height:1.5;margin:0 0 16px;overflow-wrap:anywhere}
+h1{font-size:clamp(24px,7vw,40px);color:var(--creme)}
+h2{font-size:clamp(16px,4.2vw,24px);color:var(--ouro)}
+h3{font-size:16px;color:var(--creme)}
+.lead{font-size:21px;max-width:60ch}
+.rotulo{color:var(--brasa);font-weight:700}
+p{margin:0 0 12px;max-width:68ch}
+ul.simples{margin:0;padding-left:22px}
+.conquistas{list-style:none;margin:16px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:16px}
+.selo b{display:block;font:400 14px/1.5 var(--titulo);color:var(--ouro);margin-bottom:6px}
+.selo span{font-size:17px}
+.grade{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:8px}
+.etiquetas{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0;padding:0;list-style:none}
+.etiquetas li{font-size:15px;padding:2px 8px;border:2px solid var(--indigo);background:var(--noite)}
+
+/* Botões */
+.btn{display:inline-block;max-width:100%;overflow-wrap:anywhere;font:400 13px/1.4 var(--titulo);padding:14px 18px;margin:8px 12px 8px 0;text-decoration:none;color:var(--noite);background:var(--ouro);box-shadow:0 -4px 0 0 var(--creme),0 4px 0 0 var(--creme),-4px 0 0 0 var(--creme),4px 0 0 0 var(--creme),6px 6px 0 0 var(--sombra);transition:transform .1s steps(2)}
+.btn.s{background:var(--painel);color:var(--creme)}
+.btn:hover{transform:translateY(-2px)}
+.btn:active{transform:translateY(2px)}
+
+/* Título digitando (uma vez, aplicado pelo jogo.js) */
+@keyframes digita{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+.digita{animation:digita .4s steps(16) both}
+
+footer{max-width:1100px;margin:0 auto;padding:24px 16px 48px}
+
+@media(max-width:640px){
+  body{font-size:18px}
+  #astronauta{display:none}
+  .painel{padding:18px 16px}
+  .lead{font-size:19px}
+}
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .digita{animation:none}
+  .btn,#astronauta{transition:none}
+  #astronauta.sobe{animation:none}
+}
+
+/* Numeros e anos no corpo: a Pixelify Sans confunde 5/S, 2/8 e 7/1; a Press Start 2P tem digitos inequivocos */
+.num{font-family:var(--titulo);font-size:.72em;letter-spacing:.02em;white-space:nowrap}
+.rotulo .num{font-size:.8em}

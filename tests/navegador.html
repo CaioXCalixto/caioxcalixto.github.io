@@ -1,0 +1,206 @@
+<!doctype html><meta charset="utf-8"><title>aguardando</title>
+<body>
+<script src="../jogo/sprites.js"></script>
+<script src="../jogo/ceu.js"></script>
+<script src="../jogo/jogo.js"></script>
+<script>
+// Mini harness: cada teste lanca erro se falhar. Termina escrevendo RESULTADO no console e no titulo.
+var falhas = [], total = 0;
+function teste(nome, fn) { total++; try { fn(); } catch (e) { falhas.push(nome + ': ' + e.message); } }
+function igual(a, b, msg) { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error((msg || 'diferente') + ' -> ' + JSON.stringify(a) + ' vs ' + JSON.stringify(b)); }
+function ok(c, msg) { if (!c) throw new Error(msg || 'asserção falsa'); }
+
+/* ---- Task 3: funcoes puras do ceu ---- */
+teste('faixas(0) retorna 8 hex validos', function () {
+  var f = Ceu.faixas(0); igual(f.length, 8);
+  f.forEach(function (c) { ok(/^#[0-9a-f]{6}$/i.test(c), 'hex invalido ' + c); });
+});
+teste('faixas limita t fora de 0..1 e NaN', function () {
+  igual(Ceu.faixas(-5), Ceu.faixas(0)); igual(Ceu.faixas(NaN), Ceu.faixas(0)); igual(Ceu.faixas(2), Ceu.faixas(1));
+});
+teste('faixas(0) difere de faixas(1)', function () { ok(JSON.stringify(Ceu.faixas(0)) !== JSON.stringify(Ceu.faixas(1))); });
+teste('estrelas(1,50) tem 50 itens validos e e deterministica', function () {
+  var e = Ceu.estrelas(1, 50); igual(e.length, 50);
+  e.forEach(function (s) { ok(s.x >= 0 && s.x < 1 && s.y >= 0 && s.y < 1, 'x,y fora de [0,1)'); ok([1, 2, 3, 4].indexOf(s.camada) >= 0, 'camada invalida'); });
+  igual(Ceu.estrelas(1, 50), e);
+});
+teste('quantidade cresce com t e cai pela metade no celular', function () {
+  ok(Ceu.quantidade(1, false) > Ceu.quantidade(0, false));
+  igual(Ceu.quantidade(0.5, true), Math.floor(Ceu.quantidade(0.5, false) / 2));
+  igual(Ceu.quantidade(0, false), 30); igual(Ceu.quantidade(1, false), 400);
+});
+
+
+/* ---- Task 4: desenho do canvas ---- */
+function tela(w, h) { var c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
+function pixels(c) { return Array.prototype.join.call(c.getContext('2d').getImageData(0, 0, c.width, c.height).data, ','); }
+var OPC = { celular: false, reduzido: false, mouseX: 0, mouseY: 0, alcance: 4 };
+teste('desenhar com w=0 ou h=0 nao lanca erro', function () {
+  var c = tela(10, 10); var ctx = c.getContext('2d');
+  Ceu.desenhar(ctx, 0, 10, 0.5, 0, OPC); Ceu.desenhar(ctx, 10, 0, 0.5, 0, OPC);
+});
+teste('desenhar aceita t invalido (NaN, -1, 9) sem erro', function () {
+  var c = tela(40, 60); var ctx = c.getContext('2d');
+  [NaN, -1, 9].forEach(function (t) { Ceu.desenhar(ctx, 40, 60, t, 0, OPC); });
+});
+teste('com reduzido, tempo diferente desenha o mesmo', function () {
+  var o = { celular: false, reduzido: true, mouseX: 0, mouseY: 0, alcance: 4 };
+  var a = tela(80, 120), b = tela(80, 120);
+  Ceu.desenhar(a.getContext('2d'), 80, 120, 0.7, 0, o); Ceu.desenhar(b.getContext('2d'), 80, 120, 0.7, 5000, o);
+  ok(pixels(a) === pixels(b), 'pixels diferentes com reduzido');
+});
+teste('sem reduzido, o piscar muda o desenho ao longo do tempo', function () {
+  var ts = [0, 400, 800, 1200, 1600, 2000, 2400], vistos = {};
+  ts.forEach(function (tp) { var c = tela(80, 120); Ceu.desenhar(c.getContext('2d'), 80, 120, 0.9, tp, OPC); vistos[pixels(c)] = 1; });
+  ok(Object.keys(vistos).length > 1, 'nunca piscou');
+});
+teste('cor do pixel (0,0) difere entre t=0 e t=1', function () {
+  var a = tela(40, 60), b = tela(40, 60);
+  Ceu.desenhar(a.getContext('2d'), 40, 60, 0, 0, OPC); Ceu.desenhar(b.getContext('2d'), 40, 60, 1, 0, OPC);
+  var pa = a.getContext('2d').getImageData(0, 0, 1, 1).data, pb = b.getContext('2d').getImageData(0, 0, 1, 1).data;
+  ok(Array.prototype.join.call(pa) !== Array.prototype.join.call(pb), 'mesma cor');
+});
+teste('parallax: estrelas de camadas diferentes andam em velocidades diferentes', function () {
+  var o = { celular: false, reduzido: false, mouseX: 0, mouseY: 0, alcance: 4 };
+  var a = tela(80, 120), b = tela(80, 120);
+  Ceu.desenhar(a.getContext('2d'), 80, 120, 0.50, 0, o); Ceu.desenhar(b.getContext('2d'), 80, 120, 0.52, 0, o);
+  ok(pixels(a) !== pixels(b), 'rolar nao mudou a imagem');
+});
+teste('iniciar devolve objeto com parar e remove o canvas se nao houver contexto 2d', function () {
+  var c = tela(10, 10); document.body.appendChild(c);
+  var h = Ceu.iniciar(c, function () { return 0.3; }); ok(typeof h.parar === 'function', 'sem parar'); h.parar(); c.remove();
+  var falso = document.createElement('canvas'); falso.getContext = function () { return null; }; document.body.appendChild(falso);
+  var h2 = Ceu.iniciar(falso, function () { return 0; }); ok(typeof h2.parar === 'function'); ok(!document.body.contains(falso), 'canvas nao removido');
+});
+
+/* ---- Task 5: sprites ---- */
+teste('cada pose do personagem tem 41 linhas de 24 caracteres', function () {
+  ['parado', 'subindo', 'pulo'].forEach(function (p) {
+    var m = Sprites.astronauta[p]; igual(m.length, 41, p + ' linhas');
+    m.forEach(function (l, i) { igual(l.length, 24, p + ' linha ' + i); });
+  });
+});
+teste('lua e cidade sao retangulares e todo caractere existe na paleta', function () {
+  [Sprites.lua, Sprites.cidade, Sprites.astronauta.parado, Sprites.astronauta.subindo, Sprites.astronauta.pulo].forEach(function (m) {
+    m.forEach(function (l) { igual(l.length, m[0].length, 'linha de tamanho diferente'); l.split('').forEach(function (c) { ok(c === '.' || Sprites.paleta[c], 'caractere sem cor: ' + c); }); });
+  });
+});
+teste('Sprites.desenhar pinta pixel opaco e respeita a escala', function () {
+  var c = tela(120, 200), g = c.getContext('2d');
+  Sprites.desenhar(g, Sprites.astronauta.parado, 0, 0, 4);
+  var d = g.getImageData(0, 0, 120, 200).data, opacos = 0; for (var i = 3; i < d.length; i += 4) if (d[i] > 0) opacos++;
+  ok(opacos > 2000, 'poucos pixels opacos: ' + opacos);
+  var c2 = tela(120, 200), g2 = c2.getContext('2d'); Sprites.desenhar(g2, Sprites.astronauta.parado, 0, 0, 2);
+  var d2 = g2.getImageData(50, 84, 70, 116).data, op2 = 0; for (var j = 3; j < d2.length; j += 4) if (d2[j] > 0) op2++;
+  igual(op2, 0, 'escala 2 nao deveria pintar fora de 48x82');
+});
+teste('a cidade aparece no chao em t=0 e some em t=1', function () {
+  var a = tela(80, 140), b = tela(80, 140), o = { celular: false, reduzido: true, mouseX: 0, mouseY: 0, alcance: 4 };
+  Ceu.desenhar(a.getContext('2d'), 80, 140, 0, 0, o); Ceu.desenhar(b.getContext('2d'), 80, 140, 1, 0, o);
+  var pa = a.getContext('2d').getImageData(1, 138, 1, 1).data; // canto inferior esquerdo
+  igual([pa[0], pa[1], pa[2]], [11, 14, 42], 'silhueta #0b0e2a esperada no chao em t=0');
+  var pb = b.getContext('2d').getImageData(1, 138, 1, 1).data;
+  ok(!(pb[0] === 11 && pb[1] === 14 && pb[2] === 42), 'cidade ainda visivel em t=1');
+});
+
+/* ---- Task 6: fases e progresso ---- */
+var TOPOS = [0, 800, 1600, 2400, 3200, 4000];
+teste('faseAtual escolhe a ultima fase cujo topo <= y', function () {
+  igual(Jogo.faseAtual(TOPOS, 0), 0); igual(Jogo.faseAtual(TOPOS, 900), 1); igual(Jogo.faseAtual(TOPOS, 1600), 2); igual(Jogo.faseAtual(TOPOS, 99999), 5);
+});
+teste('faseAtual com y negativo ou NaN devolve 0', function () { igual(Jogo.faseAtual(TOPOS, -50), 0); igual(Jogo.faseAtual(TOPOS, NaN), 0); });
+teste('progresso fica entre 0 e 1 e e 0 quando a pagina cabe na tela', function () {
+  igual(Jogo.progresso(0, 5000, 800), 0); igual(Jogo.progresso(4200, 5000, 800), 1); igual(Jogo.progresso(2100, 5000, 800), 0.5);
+  igual(Jogo.progresso(0, 500, 800), 0); igual(Jogo.progresso(99999, 5000, 800), 1); igual(Jogo.progresso(-20, 5000, 800), 0); igual(Jogo.progresso(NaN, 5000, 800), 0);
+});
+
+/* ---- Task 6 (ajuste visual): escala da cidade ---- */
+teste('escalaCidade: metade da largura-base, minimo 1', function () {
+  igual(Ceu.escalaCidade(320, 80), 2); igual(Ceu.escalaCidade(80, 80), 1); igual(Ceu.escalaCidade(640, 80), 4); igual(Ceu.escalaCidade(0, 80), 1); igual(Ceu.escalaCidade(NaN, 80), 1);
+});
+teste('a cidade cobre toda a largura do canvas (repetida em faixas)', function () {
+  var c = tela(320, 560), o = { celular: false, reduzido: true, mouseX: 0, mouseY: 0, alcance: 4 };
+  Ceu.desenhar(c.getContext('2d'), 320, 560, 0, 0, o);
+  var p = c.getContext('2d').getImageData(319, 559, 1, 1).data;
+  igual([p[0], p[1], p[2]], [11, 14, 42], 'chao deve ir ate a borda direita');
+});
+
+/* ---- Revisao final: reduzir movimento = sem parallax ---- */
+teste('deslocamento e zero com reduzido e proporcional a t sem reduzido', function () {
+  igual(Ceu.deslocamento(0.5, 100, 0.7, true), 0);
+  igual(Ceu.deslocamento(0.5, 100, 0.7, false), 35);
+  igual(Ceu.deslocamento(NaN, 100, 0.7, false), 0);
+});
+teste('com reduzido, rolar nao desloca estrelas: so cor e quantidade mudam, nao as posicoes', function () {
+  // Duas posicoes de t com a MESMA cor de faixa e a mesma quantidade de estrelas so podem diferir por movimento.
+  var o = { celular: false, reduzido: true, mouseX: 0, mouseY: 0, alcance: 4 };
+  var a = tela(80, 120), b = tela(80, 120);
+  Ceu.desenhar(a.getContext('2d'), 80, 120, 0.5000, 0, o); Ceu.desenhar(b.getContext('2d'), 80, 120, 0.5001, 0, o);
+  ok(pixels(a) === pixels(b), 'imagem mudou com t quase igual: ha deslocamento de parallax em reduzido');
+});
+teste('com reduzido, a lua fica na posicao final assim que aparece', function () {
+  var o = { celular: false, reduzido: true, mouseX: 0, mouseY: 0, alcance: 4 };
+  var a = tela(320, 224), b = tela(320, 224);
+  Ceu.desenhar(a.getContext('2d'), 320, 224, 0.86, 0, o); Ceu.desenhar(b.getContext('2d'), 320, 224, 1, 0, o);
+  var pa = a.getContext('2d').getImageData(250, Math.round(224 * 0.18) + 20, 1, 1).data;
+  ok(pa[0] > 200 && pa[1] > 190, 'lua nao esta na posicao final em t=0.86');
+});
+
+
+/* ---- Personagem: o avatar do Caio (pixel art com celular na mao) ---- */
+function corDe(ch) { var h = Sprites.paleta[ch]; return h ? [parseInt(h.substr(1, 2), 16), parseInt(h.substr(3, 2), 16), parseInt(h.substr(5, 2), 16)] : null; }
+function coresUsadas(m) { var u = {}; m.join('').split('').forEach(function (c) { if (c !== '.') u[c] = (u[c] || 0) + 1; }); return u; }
+teste('as tres poses existem e usam o mesmo tamanho', function () {
+  var a = Sprites.astronauta; igual(a.parado.length, a.subindo.length); igual(a.parado.length, a.pulo.length);
+});
+teste('avatar tem pele marrom, cabelo quase preto, camisa azul-marinho e o celular cinza', function () {
+  var u = coresUsadas(Sprites.astronauta.parado), pele = 0, cabelo = 0, camisa = 0, celular = 0;
+  Object.keys(u).forEach(function (k) {
+    var c = corDe(k), n = u[k]; if (!c) return;
+    if (c[0] > 150 && c[0] > c[1] + 30 && c[1] > c[2] + 20 && c[0] < 215) pele += n;
+    if (c[0] < 25 && c[1] < 25 && c[2] < 30) cabelo += n;
+    if (c[2] > c[0] + 25 && c[2] < 120) camisa += n;
+    if (Math.abs(c[0] - c[1]) < 8 && Math.abs(c[1] - c[2]) < 8 && c[0] > 150 && c[0] < 215) celular += n;
+  });
+  ok(pele >= 60, 'pouca pele marrom: ' + pele); ok(cabelo >= 60, 'pouco cabelo escuro: ' + cabelo);
+  ok(camisa >= 40, 'pouca camisa azul-marinho: ' + camisa); ok(celular >= 4, 'celular cinza nao encontrado: ' + celular);
+});
+teste('o personagem nao tem restos do fundo: cantos transparentes e fundo escuro nao pintado', function () {
+  var m = Sprites.astronauta.parado, h = m.length, w = m[0].length;
+  ['0,0', (w - 1) + ',0', '0,' + (h - 1), (w - 1) + ',' + (h - 1)].forEach(function (xy) { var p = xy.split(',').map(Number); igual(m[p[1]][p[0]], '.', 'canto ' + xy + ' deveria ser transparente'); });
+  var fundo = 0; m.join('').split('').forEach(function (c) { var rgb = corDe(c); if (rgb && Math.abs(rgb[0] - 14) + Math.abs(rgb[1] - 14) + Math.abs(rgb[2] - 21) <= 12) fundo++; });
+  igual(fundo, 0, 'celulas com a cor do fundo original');
+});
+
+
+/* ---- Rosto fiel ao original: sobrancelhas, piercing, olhos, bigode, boca e barbicha ---- */
+function faixa(m, r, c0, n) { return m[r].substr(c0, n); }
+teste('sobrancelhas pretas e grossas nos dois lados, com o piercing na ponta da esquerda', function () {
+  var m = Sprites.astronauta.parado;
+  igual(faixa(m, 12, 6, 4), '0000', 'sobrancelha esquerda'); igual(faixa(m, 12, 14, 4), '0000', 'sobrancelha direita');
+  igual([m[12][5], m[13][5], m[14][5]], ['M', '0', 'M'], 'piercing: bolinha cinza, pino preto, bolinha cinza');
+  igual([m[12][18], m[13][5 + 13], m[14][18]].join('').indexOf('M'), -1, 'o piercing so existe do lado esquerdo');
+});
+teste('os dois olhos: palpebra preta, e embaixo pele + branco + duas celulas pretas (olhar para o mesmo lado)', function () {
+  var m = Sprites.astronauta.parado;
+  igual(faixa(m, 14, 6, 4), '0000', 'palpebra esquerda'); igual(faixa(m, 14, 14, 4), '0000', 'palpebra direita');
+  [15, 16].forEach(function (r) { igual(faixa(m, r, 6, 4), '2E00', 'olho esquerdo linha ' + r); igual(faixa(m, r, 14, 4), '2E00', 'olho direito linha ' + r); });
+  igual(faixa(m, 13, 6, 12), '222222222222', 'pele entre sobrancelha e palpebra'); igual(faixa(m, 17, 5, 14), '22222222222222', 'pele abaixo dos olhos (sem nariz)');
+});
+teste('bigode preto com as pontas descendo, boca marrom e barbicha preta no queixo', function () {
+  var m = Sprites.astronauta.parado;
+  igual(faixa(m, 18, 11, 3), '000', 'barra do bigode');
+  igual([m[19][10], faixa(m, 19, 11, 3), m[19][14]], ['0', '444', '0'], 'pontas do bigode e boca');
+  igual(faixa(m, 21, 11, 2), '00', 'barbicha');
+  igual(faixa(m, 21, 9, 2) + faixa(m, 21, 13, 2), '4444', 'sombra marrom ao lado da barbicha');
+});
+teste('a area do rosto nao tem pixels de ruido (cinza ou cores soltas)', function () {
+  var m = Sprites.astronauta.parado, ruido = [];
+  for (var r = 12; r <= 19; r++) for (var c = 5; c <= 18; c++) { var ch = m[r][c]; if ('024EM'.indexOf(ch) < 0) ruido.push(r + ',' + c + '=' + ch); }
+  igual(ruido, [], 'celulas fora das cores do rosto');
+});
+
+/* ---- fim ---- */
+var r = falhas.length ? 'RESULTADO: FALHA (' + falhas.length + '/' + total + ') ' + falhas.join(' | ') : 'RESULTADO: OK (' + total + ' testes)';
+document.title = r; console.log(r);
+</script>

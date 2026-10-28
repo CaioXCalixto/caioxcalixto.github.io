@@ -1,0 +1,19 @@
+<!doctype html><meta charset="utf-8"><title>rosto</title>
+<body style="margin:0;background:#222"><canvas id="c"></canvas>
+<script>
+// Ferramenta de conferencia: recorta o rosto do original, amplia e desenha a grade de celulas por cima.
+var q = new URLSearchParams(location.search), img = new Image();
+img.onload = function () {
+  var x0 = +q.get('x0') || 408, y0 = +q.get('y0') || 274, cel = +q.get('cel') || 18.5, S = +q.get('s') || 2;
+  var rx = +q.get('rx') || 420, ry = +q.get('ry') || 430, rw = +q.get('rw') || 440, rh = +q.get('rh') || 320;
+  var c = document.getElementById('c'); c.width = rw * S; c.height = rh * S; var g = c.getContext('2d');
+  g.imageSmoothingEnabled = false; g.drawImage(img, rx, ry, rw, rh, 0, 0, rw * S, rh * S);
+  if (q.get('grade') !== '0') {
+    g.strokeStyle = 'rgba(255,255,0,.55)'; g.lineWidth = 1; g.font = '11px monospace'; g.fillStyle = '#ff0';
+    for (var i = 0; i < 26; i++) { var xx = (x0 + i * cel - rx) * S; if (xx >= 0 && xx <= c.width) { g.beginPath(); g.moveTo(xx, 0); g.lineTo(xx, c.height); g.stroke(); g.fillText(i, xx + 2, 10); } }
+    for (var j = 0; j < 45; j++) { var yy = (y0 + j * (+q.get('celh') || cel) - ry) * S; if (yy >= 0 && yy <= c.height) { g.beginPath(); g.moveTo(0, yy); g.lineTo(c.width, yy); g.stroke(); g.fillText(j, 2, yy + 11); } }
+  }
+  console.log('RESULTADO: OK');
+};
+img.src = '../_fonte/avatar-original.png';
+</script>

@@ -1,0 +1,57 @@
+<!doctype html><meta charset="utf-8"><title>aguardando</title>
+<body><script>
+// Carrega as paginas reais em iframe (mesma origem), rola ate a fase 3 e confere HUD, menu, medidor, personagem e canvas.
+var casos = [
+  { url: '../index.html', fase: 'Fase 3: Experiência', inicio: 'Início' },
+  { url: '../en/index.html', fase: 'Stage 3: Experience', inicio: 'Start' }
+], falhas = [], pend = 0;
+function esperar(cond, ms, cb) { var t0 = Date.now(); (function p() { if (cond()) return cb(true); if (Date.now() - t0 > ms) return cb(false); setTimeout(p, 100); })(); }
+function pixelsOpacos(c) { var d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data, n = 0; for (var i = 3; i < d.length; i += 4) if (d[i] > 0) n++; return n; }
+function rodar(caso) {
+  pend++;
+  var f = document.createElement('iframe'); f.style.cssText = 'width:1000px;height:700px;border:0;position:absolute;left:0;top:0';
+  function fim() { f.remove(); --pend; if (fila.length) { return proximo(); } if (pend === 0) { var r = falhas.length ? 'RESULTADO: FALHA ' + falhas.join(' | ') : 'RESULTADO: OK'; document.title = r; console.log(r); } }
+  f.onload = function () {
+    var w = f.contentWindow, d = f.contentDocument;
+    esperar(function () { var c = d.getElementById('ceu'); return c && c.width === 320; }, 4000, function (pronto) {
+      if (!pronto) { falhas.push(caso.url + ': canvas do ceu nao iniciou com 320px'); return fim(); }
+      var hud = d.querySelector('.hud'), alturaVar = parseFloat(w.getComputedStyle(d.documentElement).getPropertyValue('--hud-altura'));
+      if (hud.getBoundingClientRect().height > alturaVar + 0.5) falhas.push(caso.url + ': HUD mede ' + hud.getBoundingClientRect().height + 'px, maior que --hud-altura (' + alturaVar + 'px)');
+      if (w.getComputedStyle(d.getElementById('astronauta')).display !== 'none') falhas.push(caso.url + ': astronauta visivel em 1000px de largura (cobre texto; so deve aparecer a partir de 1280px)');
+      var av = d.getElementById('astronauta'), pose = w.Sprites.astronauta.parado;
+      if (av.width !== pose[0].length || av.height !== pose.length) falhas.push(caso.url + ': canvas do personagem mede ' + av.width + 'x' + av.height + ' mas o sprite e ' + pose[0].length + 'x' + pose.length + ' (cortaria o desenho)');
+      var rect = av.getBoundingClientRect(); if (w.getComputedStyle(av).display !== 'none' && Math.abs(rect.width / rect.height - av.width / av.height) > 0.02) falhas.push(caso.url + ': proporcao do personagem na tela distorcida');
+      var h1 = d.querySelector('h1');
+      if (h1.classList.contains('digita') || w.getComputedStyle(h1).clipPath !== 'none') falhas.push(caso.url + ': o h1 nao pode ficar escondido por animacao de digitacao');
+      if (d.getElementById('hud-fase').textContent !== caso.inicio) falhas.push(caso.url + ': HUD inicial = "' + d.getElementById('hud-fase').textContent + '"');
+      if (pixelsOpacos(d.getElementById('astronauta')) < 100) falhas.push(caso.url + ': astronauta nao desenhado');
+      w.document.documentElement.style.scrollBehavior = 'auto';
+      var alvo = d.getElementById('fase-3'); w.scrollTo(0, alvo.getBoundingClientRect().top + w.scrollY - 40);
+      esperar(function () { return d.getElementById('hud-fase').textContent === caso.fase; }, 3000, function (mudou) {
+        if (!mudou) falhas.push(caso.url + ': HUD nao mudou para "' + caso.fase + '" (esta "' + d.getElementById('hud-fase').textContent + '")');
+        var atual = d.querySelector('.fases a[aria-current="true"]');
+        if (!atual || atual.getAttribute('href') !== '#fase-3') falhas.push(caso.url + ': menu sem aria-current na fase 3');
+        if (d.querySelectorAll('.fases a[aria-current="true"]').length !== 1) falhas.push(caso.url + ': mais de um link ativo');
+        var larg = parseFloat(d.querySelector('#hud-altitude span').style.width);
+        if (!(larg > 20 && larg < 90)) falhas.push(caso.url + ': medidor de altitude fora do esperado: ' + larg);
+        var cv0 = d.getElementById('ceu');
+        function chaoSemCidade() { var q = cv0.getContext('2d').getImageData(1, cv0.height - 1, 1, 1).data; return !(q[0] === 11 && q[1] === 14 && q[2] === 42); }
+        esperar(chaoSemCidade, 3000, function (semCidade) {
+        if (!semCidade) falhas.push(caso.url + ': ceu nao acompanhou a rolagem (cidade do inicio ainda desenhada na fase 3)');
+        w.scrollTo(0, d.documentElement.scrollHeight);
+        esperar(function () { return parseFloat(d.querySelector('#hud-altitude span').style.width) > 98; }, 3000, function (topo) {
+          if (topo) { esperar(function () { var cv = d.getElementById('ceu'), p = cv.getContext('2d').getImageData(250, Math.round(cv.height * 0.18) + 20, 1, 1).data; return p[0] > 200 && p[1] > 190; }, 3000, function (lua) { if (!lua) falhas.push(caso.url + ': lua nao apareceu no ceu no fim da pagina'); fim(); }); return; }
+          if (!topo) falhas.push(caso.url + ': medidor nao chegou a 100% no fim da pagina (width=' + d.querySelector('#hud-altitude span').style.width + ', y=' + w.scrollY + ', h=' + d.documentElement.scrollHeight + ', vh=' + w.innerHeight + ', rotulo=' + d.getElementById('hud-fase').textContent + ', hidden=' + d.hidden + ', vis=' + d.visibilityState + ')');
+          fim();
+        });
+        });
+      });
+    });
+  };
+  f.src = caso.url; document.body.appendChild(f);
+}
+var fila = casos.slice();
+function proximo() { if (fila.length) rodar(fila.shift()); }
+var fimOriginal = null;
+proximo();
+</script>

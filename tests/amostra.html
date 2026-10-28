@@ -1,0 +1,5 @@
+<!doctype html><meta charset="utf-8"><title>amostra</title>
+<style>body{margin:0;background:#222;display:flex;gap:6px;padding:6px}canvas{width:200px;height:350px;image-rendering:pixelated}</style>
+<body><script src="../jogo/sprites.js"></script><script src="../jogo/ceu.js"></script>
+<script>[0,0.2,0.4,0.6,0.8,1].forEach(function(t){var c=document.createElement('canvas');c.width=100;c.height=175;document.body.appendChild(c);
+Ceu.desenhar(c.getContext('2d'),100,175,t,0,{celular:false,reduzido:true,mouseX:0,mouseY:0,alcance:4});});</script>

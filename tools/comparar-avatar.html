@@ -1,0 +1,15 @@
+<!doctype html><meta charset="utf-8"><title>comparar</title>
+<style>body{margin:0;background:#2a3a6a;display:flex;gap:16px;padding:10px;align-items:flex-start}canvas{image-rendering:pixelated}</style>
+<body><canvas id="o"></canvas><canvas id="n"></canvas>
+<script src="../jogo/sprites.js"></script>
+<script>
+// Ferramenta de conferencia: original (esquerda) x sprite recriado (direita), mesma altura.
+var img = new Image(); img.onload = function () {
+  var o = document.getElementById('o'), x0 = 395, y0 = 255, w = 450, h = 765, e = 0.62;
+  o.width = w * e; o.height = h * e; var g = o.getContext('2d'); g.drawImage(img, x0, y0, w, h, 0, 0, o.width, o.height);
+  var n = document.getElementById('n'); n.width = 24; n.height = 41; n.style.width = (24 * 12.2) + 'px'; n.style.height = (41 * 12.2) + 'px';
+  var bg = n.getContext('2d'); bg.fillStyle = '#0e0e15'; bg.fillRect(0, 0, 24, 41); Sprites.desenhar(bg, Sprites.astronauta.parado, 0, 0, 1);
+  console.log('RESULTADO: OK');
+};
+img.src = '../_fonte/avatar-original.png';
+</script>

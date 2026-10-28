@@ -1,0 +1,19 @@
+<!doctype html><meta charset="utf-8"><title>mede</title>
+<script>
+// Mede o tamanho real das celulas do desenho original: histograma dos comprimentos de trechos de cor constante.
+var img = new Image();
+img.onload = function () {
+  var W = img.width, H = img.height, c = document.createElement('canvas'); c.width = W; c.height = H;
+  var g = c.getContext('2d'); g.drawImage(img, 0, 0); var d = g.getImageData(0, 0, W, H).data;
+  function dif(i, j) { return Math.abs(d[i] - d[j]) + Math.abs(d[i + 1] - d[j + 1]) + Math.abs(d[i + 2] - d[j + 2]); }
+  var hx = {}, hy = {}, ex = {}, ey = {};
+  var X0 = 410, X1 = 830, Y0 = 280, Y1 = 1000;
+  for (var y = Y0; y < Y1; y += 2) { var ult = null; for (var x = X0 + 1; x < X1; x++) { if (dif((y * W + x) * 4, (y * W + x - 1) * 4) > 60) { if (ult !== null) { var L = x - ult; if (L > 8 && L < 120) hx[L] = (hx[L] || 0) + 1; } ult = x; ex[x] = (ex[x] || 0) + 1; } } }
+  for (var x2 = X0; x2 < X1; x2 += 2) { var ult2 = null; for (var y2 = Y0 + 1; y2 < Y1; y2++) { if (dif((y2 * W + x2) * 4, ((y2 - 1) * W + x2) * 4) > 60) { if (ult2 !== null) { var L2 = y2 - ult2; if (L2 > 8 && L2 < 120) hy[L2] = (hy[L2] || 0) + 1; } ult2 = y2; ey[y2] = (ey[y2] || 0) + 1; } } }
+  function topo(h, n) { return Object.keys(h).map(function (k) { return [+k, h[k]]; }).sort(function (a, b) { return b[1] - a[1]; }).slice(0, n); }
+  function picos(e, n) { return Object.keys(e).map(function (k) { return [+k, e[k]]; }).sort(function (a, b) { return b[1] - a[1]; }).slice(0, n).sort(function (a, b) { return a[0] - b[0]; }); }
+  var r = 'RESULTADO: OK ' + JSON.stringify({ gapsX: topo(hx, 8), gapsY: topo(hy, 8), bordasX: picos(ex, 28), bordasY: picos(ey, 40) });
+  console.log(r);
+};
+img.src = '../_fonte/avatar-original.png';
+</script>

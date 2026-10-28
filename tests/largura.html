@@ -1,0 +1,41 @@
+<!doctype html><meta charset="utf-8"><title>aguardando</title>
+<body><script>
+// Mede overflow horizontal das duas paginas em varias larguras. Um iframe de cada vez (mesma origem, via http):
+// abrir todos juntos deixava a medicao instavel quando a maquina estava ocupada.
+var paginas = ['../index.html', '../en/index.html'], larguras = [320, 360, 390, 768], falhas = [], fila = [];
+paginas.forEach(function (p) { larguras.forEach(function (w) { fila.push([p, w]); }); });
+
+function culpados(doc, w) {
+  return [].slice.call(doc.querySelectorAll('body *')).filter(function (e) {
+    return e.getBoundingClientRect().right > w + 1 && !e.closest('.fases');
+  }).slice(0, 3).map(function (e) {
+    var cs = e.ownerDocument.defaultView.getComputedStyle(e), r = e.getBoundingClientRect();
+    return e.tagName + '#' + e.id + '.' + e.className + '(' + Math.round(r.right) + ' w=' + Math.round(r.width) + ' disp=' + cs.display + ' pos=' + cs.position + ')';
+  });
+}
+
+function medir(url, w, proximo) {
+  var f = document.createElement('iframe'), tentativas = 0;
+  f.style.cssText = 'width:' + w + 'px;height:800px;border:0;position:absolute;left:0;top:0';
+  function terminar() { f.remove(); proximo(); }
+  function checar() {
+    var doc = null;
+    try { doc = f.contentDocument; } catch (e) {}
+    if (!doc || doc.readyState !== 'complete' || !doc.documentElement || doc.location.href === 'about:blank') {
+      if (++tentativas > 150) { falhas.push(url + ' @' + w + ': nao carregou'); return terminar(); }
+      return setTimeout(checar, 100);
+    }
+    // espera o jogo.js/ceu.js terminarem de ajustar o layout antes de medir
+    setTimeout(function () {
+      var d = f.contentDocument.documentElement;
+      if (d.scrollWidth > w) falhas.push(url + ' @' + w + ': scrollWidth ' + d.scrollWidth + ' culpados ' + culpados(f.contentDocument, w).join(','));
+      terminar();
+    }, 600);
+  }
+  f.src = url; document.body.appendChild(f); setTimeout(checar, 100);
+}
+
+function fim() { var r = falhas.length ? 'RESULTADO: FALHA ' + falhas.join(' | ') : 'RESULTADO: OK'; document.title = r; console.log(r); }
+function proximo() { if (!fila.length) return fim(); var c = fila.shift(); medir(c[0], c[1], proximo); }
+proximo();
+</script>
